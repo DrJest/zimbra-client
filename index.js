@@ -106,6 +106,44 @@ getUserAuthToken = function(hostName,login,password,cb) {
         });
 }
 
+getUserInfo = function(hostName,userAuthToken,cb) {
+    var soapURL = getUserSoapURL(hostName);
+    var authRequestObject = {
+        "GetInfoRequest": {
+            "@": {
+                "xmlns": "urn:zimbraAccount"
+            }
+        }
+    };
+    var req = makeSOAPEnvelope(authRequestObject,userAuthToken,USER_AGENT);
+    request({
+            method:"POST",
+            uri:soapURL,
+            headers: {
+                "Content-Type": "application/soap+xml; charset=utf-8"
+            },
+            body: req,
+            strictSSL: false,
+            jar: false,
+            timeout: 10000
+        },
+        function(err,resp,body) {
+            if(err != null) {
+                cb(err,null);
+            } else {
+                processResponse(body, function(result) {
+                    if(result.err != null) {
+                        cb(err,null);
+                    } else if(result.payload.Body.GetInfoResponse != null) {
+                        cb(null,result.payload.Body.GetInfoResponse);
+                    } else {
+                        cb({"message":"Error: could node parse GetInfoResponse from Zimbra","resp":resp,"body":body});
+                    }
+                });
+            }
+        });
+}
+
 createAccount = function(hostName, user, adminAuthToken, cb) {
     var adminURL = getAdminURL(hostName);
     var createAccountRequestObj = {
@@ -570,6 +608,7 @@ exports.createAccount = createAccount;
 exports.getAdminAuthToken = getAdminAuthToken;
 exports.createDomain = createDomain;
 exports.getUserAuthToken = getUserAuthToken;
+exports.getUserInfo = getUserInfo;
 exports.getFolder = getFolder;
 exports.getCalendars = getCalendars;
 exports.searchAppointments = searchAppointments;
